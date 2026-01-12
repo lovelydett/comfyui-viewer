@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .image-wrapper {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover .image-wrapper img {
+            transform: scale(1.05);
+        }
+
+        .image-info {
+            padding: 15px;
+        }
+
+        .image-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            word-break: break-all;
+            font-size: 14px;
+        }
+
+        .image-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .image-size {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .image-date {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .pagination a,
+        .pagination span {
+            padding: 10px 15px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .pagination a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .pagination .current {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+
+        .pagination .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .no-images {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            padding: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .lightbox.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            z-index: 1001;
+        }
+
+        .lightbox-close:hover {
+            color: #667eea;
+        }
+
+        .lightbox-caption {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            max-width: 80%;
+            word-break: break-all;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+
+            .image-wrapper {
+                height: 150px;
+            }
+
+            .pagination {
+                flex-wrap: wrap;
+            }
+
+            .lightbox-close {
+                font-size: 30px;
+                top: 15px;
+                right: 20px;
+            }
+
+            .lightbox-caption {
+                font-size: 14px;
+                bottom: 15px;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Image Gallery</h1>
+
+        {{if .error}}
+        <div class="error">
+            {{.error}}
+        </div>
+        {{end}}
+
+        {{if .images}}
+        <div class="image-grid">
+            {{range .images}}
+            <div class="image-card">
+                <div class="image-wrapper">
+                    <img src="{{.URL}}" alt="{{.Name}}" loading="lazy">
+                </div>
+                <div class="image-info">
+                    <div class="image-name">{{.Name}}</div>
+                    <div class="image-details">
+                        <div class="image-size">
+                            <span>📁</span>
+                            <span>{{.Size}}</span>
+                        </div>
+                        <div class="image-date">
+                            <span>🕐</span>
+                            <span>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+
+        <div class="pagination">
+            {{if gt .currentPage 1}}
+            <a href="/?page={{subtract .currentPage 1}}">← Previous</a>
+            {{else}}
+            <span class="disabled">← Previous</span>
+            {{end}}
+
+            {{range $page := sequence 1 .totalPages}}
+            {{if eq $page $.currentPage}}
+            <span class="current">{{$page}}</span>
+            {{else}}
+            <a href="/?page={{$page}}">{{$page}}</a>
+            {{end}}
+            {{end}}
+
+            {{if lt .currentPage .totalPages}}
+            <a href="/?page={{add .currentPage 1}}">Next →</a>
+            {{else}}
+            <span class="disabled">Next →</span>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="no-images">
+            No images found. Upload some images to see them here!
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <span class="lightbox-close">&times;</span>
+        <img class="lightbox-content" id="lightbox-img" src="" alt="">
+        <div class="lightbox-caption" id="lightbox-caption"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            const lightboxCaption = document.getElementById('lightbox-caption');
+            const closeBtn = document.querySelector('.lightbox-close');
+
+            // Add click event to all images in the grid
+            const images = document.querySelectorAll('.image-wrapper img');
+            images.forEach(img => {
+                img.style.cursor = 'pointer';
+                img.addEventListener('click', function() {
+                    // Get the image URL (use the same URL to display original)
+                    const imageUrl = this.src;
+                    const imageName = this.alt;
+
+                    // Set the lightbox content
+                    lightboxImg.src = imageUrl;
+                    lightboxCaption.textContent = imageName;
+
+                    // Show the lightbox
+                    lightbox.classList.add('active');
+                    document.body.style.overflow = 'hidden'; // Prevent scrolling
+                });
+            });
+
+            // Close lightbox when clicking the close button
+            closeBtn.addEventListener('click', function() {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = ''; // Restore scrolling
+            });
+
+            // Close lightbox when clicking outside the image
+            lightbox.addEventListener('click', function(e) {
+                if (e.target === lightbox) {
+                    lightbox.classList.remove('active');
+                    document.body.style.overflow = ''; // Restore scrolling
+                }
+            });
+
+            // Close lightbox when pressing Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                    lightbox.classList.remove('active');
+                    document.body.style.overflow = ''; // Restore scrolling
+                }
+            });
+        });
+    </script>
+</body>
+</html>

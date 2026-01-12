@@ -1,0 +1,207 @@
+{
+  "298": {
+    "inputs": {
+      "samples": [
+        "747",
+        0
+      ],
+      "vae": [
+        "710",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "694": {
+    "inputs": {
+      "cfg": 4.7,
+      "model": [
+        "701",
+        0
+      ],
+      "positive": [
+        "748",
+        0
+      ],
+      "negative": [
+        "749",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG引导器"
+    }
+  },
+  "700": {
+    "inputs": {
+      "sampler_name": "dpmpp_2m"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "K采样器选择"
+    }
+  },
+  "701": {
+    "inputs": {
+      "shift": 1,
+      "model": [
+        "731",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "Flow Shift"
+    }
+  },
+  "710": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "718": {
+    "inputs": {
+      "noise_seed": 6989132221507
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "SEED"
+    }
+  },
+  "731": {
+    "inputs": {
+      "unet_name": "chroma-unlocked-v48-detail-calibrated.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "733": {
+    "inputs": {
+      "clip_name": "t5xxl_fp16.safetensors",
+      "type": "chroma",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "737": {
+    "inputs": {
+      "width": 800,
+      "height": 800,
+      "batch_size": 3
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "空Latent图像（SD3）"
+    }
+  },
+  "740": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "298",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "741": {
+    "inputs": {
+      "min_padding": 0,
+      "min_length": 0,
+      "clip": [
+        "733",
+        0
+      ]
+    },
+    "class_type": "T5TokenizerOptions",
+    "_meta": {
+      "title": "T5TokenizerOptions"
+    }
+  },
+  "747": {
+    "inputs": {
+      "noise": [
+        "718",
+        0
+      ],
+      "guider": [
+        "694",
+        0
+      ],
+      "sampler": [
+        "700",
+        0
+      ],
+      "sigmas": [
+        "751",
+        0
+      ],
+      "latent_image": [
+        "737",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "自定义采样器（高级）"
+    }
+  },
+  "748": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "741",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "749": {
+    "inputs": {
+      "text": "text, words, letters, font, watermark, signature, logo, UI, interface, button, subtitle, caption, speech bubble, comic text, manga text, handwritten, scribble, multiple subgraphs, collage, split image, diptych, triptych, panels, anime, cartoon, illustration，comic panels, photo frames, borders, grid, layout, multiple subjects, disconnected elements, disorganized, chaotic composition, floating objects, misplaced limbs, nonsensical object placement, broken anatomy, extra limbs, fused fingers, blurry, unfocused, out of focus, low resolution, bad quality, worst quality, jpeg artifacts, noise, dull colors, flat background, boring composition, nonsensical object placement",
+      "clip": [
+        "741",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "751": {
+    "inputs": {
+      "steps": 26,
+      "alpha": 0.45000000000000007,
+      "beta": 0.44999999999999984,
+      "model": [
+        "701",
+        0
+      ]
+    },
+    "class_type": "BetaSamplingScheduler",
+    "_meta": {
+      "title": "Beta采样调度器"
+    }
+  }
+}

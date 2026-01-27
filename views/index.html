@@ -53,6 +53,7 @@
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
         }
 
         .image-card:hover {
@@ -162,6 +163,94 @@
             backdrop-filter: blur(10px);
         }
 
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 12px;
+        }
+
+        .toolbar-left,
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-primary {
+            background: #ffffff;
+            color: #5b62d6;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+        }
+
+        .btn-danger {
+            background: #e84855;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+        }
+
+        .select-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            z-index: 2;
+            display: none;
+            cursor: pointer;
+        }
+
+        .image-card.select-mode .select-checkbox {
+            display: block;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            border: none;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            transition: background 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: rgba(232, 72, 85, 0.9);
+        }
+
         .lightbox {
             display: none;
             position: fixed;
@@ -257,6 +346,11 @@
                 bottom: 15px;
                 padding: 8px 15px;
             }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
@@ -271,9 +365,20 @@
         {{end}}
 
         {{if .images}}
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <button id="toggle-select" class="btn btn-primary" type="button">Select</button>
+                <button id="delete-selected" class="btn btn-danger" type="button" disabled>Delete Selected (0)</button>
+            </div>
+            <div class="toolbar-right">
+                <span id="selection-status" style="color: white; font-weight: 600; display: none;">0 selected</span>
+            </div>
+        </div>
         <div class="image-grid">
             {{range .images}}
-            <div class="image-card">
+            <div class="image-card" data-filename="{{.Name}}">
+                <input class="select-checkbox" type="checkbox" aria-label="Select image {{.Name}}">
+                <button class="delete-btn" type="button" title="Delete image">🗑️</button>
                 <div class="image-wrapper">
                     <img src="{{.URL}}" alt="{{.Name}}" loading="lazy">
                 </div>
@@ -335,6 +440,12 @@
             const lightboxImg = document.getElementById('lightbox-img');
             const lightboxCaption = document.getElementById('lightbox-caption');
             const closeBtn = document.querySelector('.lightbox-close');
+            const toggleSelectBtn = document.getElementById('toggle-select');
+            const deleteSelectedBtn = document.getElementById('delete-selected');
+            const selectionStatus = document.getElementById('selection-status');
+            function getCards() {
+                return Array.from(document.querySelectorAll('.image-card'));
+            }
 
             // Add click event to all images in the grid
             const images = document.querySelectorAll('.image-wrapper img');
@@ -375,6 +486,110 @@
                     lightbox.classList.remove('active');
                     document.body.style.overflow = ''; // Restore scrolling
                 }
+            });
+
+            function setSelectMode(enabled) {
+                getCards().forEach(card => {
+                    card.classList.toggle('select-mode', enabled);
+                    if (!enabled) {
+                        const checkbox = card.querySelector('.select-checkbox');
+                        checkbox.checked = false;
+                    }
+                });
+                selectionStatus.style.display = enabled ? 'inline' : 'none';
+                toggleSelectBtn.textContent = enabled ? 'Cancel Select' : 'Select';
+                updateSelectionCount();
+            }
+
+            function getSelectedFilenames() {
+                return Array.from(document.querySelectorAll('.image-card .select-checkbox:checked'))
+                    .map(checkbox => checkbox.closest('.image-card').dataset.filename);
+            }
+
+            function updateSelectionCount() {
+                const count = getSelectedFilenames().length;
+                deleteSelectedBtn.textContent = `Delete Selected (${count})`;
+                deleteSelectedBtn.disabled = count === 0;
+                selectionStatus.textContent = `${count} selected`;
+            }
+
+            async function deleteSingleImage(filename) {
+                const res = await fetch('/api/v1/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'Delete failed');
+                }
+            }
+
+            async function deleteBatchImages(filenames) {
+                const res = await fetch('/api/v1/delete-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filenames })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'Batch delete failed');
+                }
+                return res.json();
+            }
+
+            function removeCardsByFilename(filenames) {
+                const set = new Set(filenames);
+                getCards().forEach(card => {
+                    if (set.has(card.dataset.filename)) {
+                        card.remove();
+                    }
+                });
+            }
+
+            toggleSelectBtn?.addEventListener('click', function() {
+                const enabled = !getCards().some(card => card.classList.contains('select-mode'));
+                setSelectMode(enabled);
+            });
+
+            deleteSelectedBtn?.addEventListener('click', async function() {
+                const selected = getSelectedFilenames();
+                if (selected.length === 0) {
+                    return;
+                }
+                if (!confirm(`Delete ${selected.length} image(s)? This cannot be undone.`)) {
+                    return;
+                }
+                try {
+                    const result = await deleteBatchImages(selected);
+                    if (Array.isArray(result.deleted)) {
+                        removeCardsByFilename(result.deleted);
+                    }
+                    setSelectMode(false);
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            getCards().forEach(card => {
+                const checkbox = card.querySelector('.select-checkbox');
+                const deleteBtn = card.querySelector('.delete-btn');
+
+                checkbox?.addEventListener('change', updateSelectionCount);
+                deleteBtn?.addEventListener('click', async function(e) {
+                    e.stopPropagation();
+                    const filename = card.dataset.filename;
+                    if (!confirm(`Delete ${filename}? This cannot be undone.`)) {
+                        return;
+                    }
+                    try {
+                        await deleteSingleImage(filename);
+                        card.remove();
+                        updateSelectionCount();
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
             });
         });
     </script>

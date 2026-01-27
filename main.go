@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,37 @@ type ImageInfo struct {
 	Size      string
 	CreatedAt time.Time
 	URL       string
+}
+
+var allowedImageExts = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".gif":  true,
+	".bmp":  true,
+	".webp": true,
+}
+
+func isAllowedImage(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	return allowedImageExts[ext]
+}
+
+func safeUploadPath(filename string) (string, bool) {
+	if filename == "" {
+		return "", false
+	}
+	base := filepath.Base(filename)
+	if base != filename {
+		return "", false
+	}
+	if strings.ContainsAny(filename, `/\`) {
+		return "", false
+	}
+	if !isAllowedImage(filename) {
+		return "", false
+	}
+	return filepath.Join("./uploads", base), true
 }
 
 // GetImages retrieves images from the uploads directory with pagination
@@ -46,8 +78,7 @@ func GetImages(page int, perPage int) ([]ImageInfo, int, error) {
 		}
 
 		// Check if it's an image file by extension
-		ext := filepath.Ext(entry.Name())
-		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp" || ext == ".webp" {
+		if isAllowedImage(entry.Name()) {
 			info, err := entry.Info()
 			if err != nil {
 				continue
@@ -197,6 +228,74 @@ func InitRouter() *gin.Engine {
 			return
 		}
 		c.JSON(200, gin.H{"message": "Image uploaded successfully", "filename": newFilename})
+	})
+
+	r.POST("/api/v1/delete", func(c *gin.Context) {
+		var body struct {
+			Filename string `json:"filename"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid request body"})
+			return
+		}
+
+		targetPath, ok := safeUploadPath(body.Filename)
+		if !ok {
+			c.JSON(400, gin.H{"error": "Invalid filename"})
+			return
+		}
+
+		if err := os.Remove(targetPath); err != nil {
+			if os.IsNotExist(err) {
+				c.JSON(404, gin.H{"error": "File not found"})
+				return
+			}
+			c.JSON(500, gin.H{"error": "Failed to delete file"})
+			return
+		}
+
+		c.JSON(200, gin.H{"message": "Image deleted successfully", "filename": body.Filename})
+	})
+
+	r.POST("/api/v1/delete-batch", func(c *gin.Context) {
+		var body struct {
+			Filenames []string `json:"filenames"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid request body"})
+			return
+		}
+		if len(body.Filenames) == 0 {
+			c.JSON(400, gin.H{"error": "No filenames provided"})
+			return
+		}
+
+		deleted := make([]string, 0, len(body.Filenames))
+		failed := make(map[string]string)
+
+		for _, name := range body.Filenames {
+			targetPath, ok := safeUploadPath(name)
+			if !ok {
+				failed[name] = "invalid filename"
+				continue
+			}
+
+			if err := os.Remove(targetPath); err != nil {
+				if os.IsNotExist(err) {
+					failed[name] = "not found"
+				} else {
+					failed[name] = "delete failed"
+				}
+				continue
+			}
+
+			deleted = append(deleted, name)
+		}
+
+		c.JSON(200, gin.H{
+			"deleted": deleted,
+			"failed":  failed,
+		})
 	})
 
 	return r

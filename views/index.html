@@ -277,6 +277,37 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1001;
+            transition: background 0.2s ease;
+        }
+
+        .lightbox-nav:hover {
+            background: rgba(102, 126, 234, 0.9);
+        }
+
+        .lightbox-prev {
+            left: 20px;
+        }
+
+        .lightbox-next {
+            right: 20px;
+        }
+
         .lightbox-close {
             position: absolute;
             top: 20px;
@@ -345,6 +376,20 @@
                 font-size: 14px;
                 bottom: 15px;
                 padding: 8px 15px;
+            }
+
+            .lightbox-nav {
+                width: 38px;
+                height: 38px;
+                font-size: 20px;
+            }
+
+            .lightbox-prev {
+                left: 10px;
+            }
+
+            .lightbox-next {
+                right: 10px;
             }
 
             .toolbar {
@@ -430,6 +475,8 @@
     <!-- Lightbox Modal -->
     <div id="lightbox" class="lightbox">
         <span class="lightbox-close">&times;</span>
+        <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image">‹</button>
+        <button class="lightbox-nav lightbox-next" type="button" aria-label="Next image">›</button>
         <img class="lightbox-content" id="lightbox-img" src="" alt="">
         <div class="lightbox-caption" id="lightbox-caption"></div>
     </div>
@@ -440,6 +487,8 @@
             const lightboxImg = document.getElementById('lightbox-img');
             const lightboxCaption = document.getElementById('lightbox-caption');
             const closeBtn = document.querySelector('.lightbox-close');
+            const prevBtn = document.querySelector('.lightbox-prev');
+            const nextBtn = document.querySelector('.lightbox-next');
             const toggleSelectBtn = document.getElementById('toggle-select');
             const deleteSelectedBtn = document.getElementById('delete-selected');
             const selectionStatus = document.getElementById('selection-status');
@@ -448,17 +497,31 @@
             }
 
             // Add click event to all images in the grid
-            const images = document.querySelectorAll('.image-wrapper img');
-            images.forEach(img => {
+            let images = [];
+            let currentIndex = -1;
+
+            function refreshImages() {
+                images = Array.from(document.querySelectorAll('.image-wrapper img'));
+            }
+
+            function showImageAt(index) {
+                refreshImages();
+                if (images.length === 0) {
+                    return;
+                }
+                currentIndex = (index + images.length) % images.length;
+                const img = images[currentIndex];
+                lightboxImg.src = img.src;
+                lightboxCaption.textContent = img.alt;
+            }
+
+            refreshImages();
+            images.forEach((img, index) => {
                 img.style.cursor = 'pointer';
                 img.addEventListener('click', function() {
-                    // Get the image URL (use the same URL to display original)
-                    const imageUrl = this.src;
-                    const imageName = this.alt;
-
-                    // Set the lightbox content
-                    lightboxImg.src = imageUrl;
-                    lightboxCaption.textContent = imageName;
+                    refreshImages();
+                    currentIndex = images.indexOf(this);
+                    showImageAt(currentIndex);
 
                     // Show the lightbox
                     lightbox.classList.add('active');
@@ -480,11 +543,28 @@
                 }
             });
 
+            prevBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showImageAt(currentIndex - 1);
+            });
+
+            nextBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showImageAt(currentIndex + 1);
+            });
+
             // Close lightbox when pressing Escape key
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                if (!lightbox.classList.contains('active')) {
+                    return;
+                }
+                if (e.key === 'Escape') {
                     lightbox.classList.remove('active');
                     document.body.style.overflow = ''; // Restore scrolling
+                } else if (e.key === 'ArrowLeft') {
+                    showImageAt(currentIndex - 1);
+                } else if (e.key === 'ArrowRight') {
+                    showImageAt(currentIndex + 1);
                 }
             });
 
@@ -545,6 +625,7 @@
                         card.remove();
                     }
                 });
+                refreshImages();
             }
 
             toggleSelectBtn?.addEventListener('click', function() {

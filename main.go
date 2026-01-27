@@ -303,5 +303,5 @@ func InitRouter() *gin.Engine {
 
 func main() {
 	r := InitRouter()
-	r.Run(":38080")
+	r.Run("0.0.0.0:38080")
 }

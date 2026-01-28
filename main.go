@@ -2,6 +2,7 @@ package main
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
@@ -157,8 +160,18 @@ func formatFileSize(bytes int64) string {
 	return strconv.FormatFloat(float64(bytes)/float64(div), 'f', 2, 64) + " KMGTPE"[exp:exp+1] + "B"
 }
 
-func InitRouter() *gin.Engine {
+func InitRouter(token string, sessionSecret string) *gin.Engine {
 	r := gin.Default()
+
+	store := cookie.NewStore([]byte(sessionSecret))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   7 * 24 * 60 * 60,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false,
+	})
+	r.Use(sessions.Sessions("comfyui_viewer_session", store))
 
 	// Create template with custom functions
 	r.SetFuncMap(template.FuncMap{
@@ -176,11 +189,66 @@ func InitRouter() *gin.Engine {
 	// Load HTML templates
 	r.LoadHTMLGlob("views/*")
 
+	authRequired := func(c *gin.Context) {
+		session := sessions.Default(c)
+		if authed, ok := session.Get("authed").(bool); ok && authed {
+			c.Next()
+			return
+		}
+
+		if c.Request.Method == http.MethodGet {
+			c.Redirect(http.StatusFound, "/login")
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		}
+		c.Abort()
+	}
+
+	r.GET("/login", func(c *gin.Context) {
+		session := sessions.Default(c)
+		if authed, ok := session.Get("authed").(bool); ok && authed {
+			c.Redirect(http.StatusFound, "/")
+			return
+		}
+		c.HTML(http.StatusOK, "login.html", gin.H{
+			"error": c.Query("error"),
+		})
+	})
+
+	r.POST("/login", func(c *gin.Context) {
+		submitted := c.PostForm("token")
+		if submitted == token {
+			session := sessions.Default(c)
+			session.Set("authed", true)
+			if err := session.Save(); err != nil {
+				c.HTML(http.StatusInternalServerError, "login.html", gin.H{
+					"error": "Failed to start session",
+				})
+				return
+			}
+			c.Redirect(http.StatusFound, "/")
+			return
+		}
+		c.HTML(http.StatusUnauthorized, "login.html", gin.H{
+			"error": "Invalid token",
+		})
+	})
+
+	r.POST("/logout", func(c *gin.Context) {
+		session := sessions.Default(c)
+		session.Clear()
+		_ = session.Save()
+		c.Redirect(http.StatusFound, "/login")
+	})
+
+	authGroup := r.Group("/")
+	authGroup.Use(authRequired)
+
 	// Serve static files from uploads directory
-	r.Static("/uploads", "./uploads")
+	authGroup.Static("/uploads", "./uploads")
 
 	// Index page with image list
-	r.GET("/", func(c *gin.Context) {
+	authGroup.GET("/", func(c *gin.Context) {
 		// Get page parameter, default to 1
 		pageStr := c.DefaultQuery("page", "1")
 		page, err := strconv.Atoi(pageStr)
@@ -208,7 +276,7 @@ func InitRouter() *gin.Engine {
 		})
 	})
 
-	r.POST("/api/v1/upload", func(c *gin.Context) {
+	authGroup.POST("/api/v1/upload", func(c *gin.Context) {
 		// Get image
 		file, err := c.FormFile("image")
 
@@ -230,7 +298,7 @@ func InitRouter() *gin.Engine {
 		c.JSON(200, gin.H{"message": "Image uploaded successfully", "filename": newFilename})
 	})
 
-	r.POST("/api/v1/delete", func(c *gin.Context) {
+	authGroup.POST("/api/v1/delete", func(c *gin.Context) {
 		var body struct {
 			Filename string `json:"filename"`
 		}
@@ -257,7 +325,7 @@ func InitRouter() *gin.Engine {
 		c.JSON(200, gin.H{"message": "Image deleted successfully", "filename": body.Filename})
 	})
 
-	r.POST("/api/v1/delete-batch", func(c *gin.Context) {
+	authGroup.POST("/api/v1/delete-batch", func(c *gin.Context) {
 		var body struct {
 			Filenames []string `json:"filenames"`
 		}
@@ -302,6 +370,14 @@ func InitRouter() *gin.Engine {
 }
 
 func main() {
-	r := InitRouter()
+	token := os.Getenv("TOKEN")
+	if token == "" {
+		log.Fatal("TOKEN env var is required to start the server")
+	}
+	sessionSecret := os.Getenv("SESSION_SECRET")
+	if sessionSecret == "" {
+		sessionSecret = token
+	}
+	r := InitRouter(token, sessionSecret)
 	r.Run("0.0.0.0:38889")
 }

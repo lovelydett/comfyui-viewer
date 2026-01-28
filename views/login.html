@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: radial-gradient(circle at top, #7783f0 0%, #5d58c7 40%, #2b244b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 1.8em;
+            color: #2b244b;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #5b5b6f;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            color: #2b244b;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #d0d2e3;
+            font-size: 1em;
+            margin-bottom: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 8px;
+            background: #5b62d6;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        button:hover {
+            background: #4a51c1;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Enter Access Token</h1>
+        <p>This gallery is protected. Provide the token to continue.</p>
+        {{if .error}}
+        <div class="error">{{.error}}</div>
+        {{end}}
+        <form method="POST" action="/login">
+            <label for="token">Token</label>
+            <input id="token" name="token" type="password" autocomplete="off" autofocus required>
+            <button type="submit">Unlock Gallery</button>
+        </form>
+    </div>
+</body>
+</html>

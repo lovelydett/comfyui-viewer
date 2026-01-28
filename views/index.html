@@ -214,6 +214,17 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.18);
         }
 
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.85);
+            color: #3f3f56;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+        }
+
         .select-checkbox {
             position: absolute;
             top: 10px;
@@ -419,6 +430,9 @@
             </div>
             <div class="toolbar-right">
                 <span id="selection-status" style="color: white; font-weight: 600; display: none;">0 selected</span>
+                <form method="POST" action="/logout">
+                    <button class="btn btn-secondary" type="submit">Logout</button>
+                </form>
             </div>
         </div>
         <div class="image-grid">

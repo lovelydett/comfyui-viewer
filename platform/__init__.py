@@ -1,4 +1,3 @@
-import torch
 import numpy as np
 from PIL import Image
 import io
@@ -59,7 +58,7 @@ class HTTPUploadImage:
                 resp = session.post(
                     f"{base_url}/api/v1/upload",
                     files=files,
-                    timeout=10
+                    timeout=30
                 )
                 if resp.status_code == 200:
                     print(f"✅ Uploaded {filename}")

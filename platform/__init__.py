@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 import io
 import requests
+import os
 
 class HTTPUploadImage:
     @classmethod
@@ -11,6 +12,7 @@ class HTTPUploadImage:
             "required": {
                 "images": ("IMAGE",),
                 "filename_prefix": ("STRING", {"default": "img"}),
+                "token": ("STRING", {"default": ""}),
             }
         }
 
@@ -19,7 +21,27 @@ class HTTPUploadImage:
     OUTPUT_NODE = True
     CATEGORY = "api"
 
-    def upload(self, images, filename_prefix="img"):
+    def upload(self, images, filename_prefix="img", token=""):
+        base_url = "http://47.82.92.91:38080"
+        session = requests.Session()
+        auth_token = token.strip() or os.getenv("TOKEN", "").strip()
+        if not auth_token:
+            print("❌ Missing token. Provide token input or set TOKEN env var.")
+            return {}
+
+        try:
+            login_resp = session.post(
+                f"{base_url}/login",
+                data={"token": auth_token},
+                timeout=10
+            )
+            if login_resp.status_code != 200:
+                print(f"❌ Login failed: {login_resp.status_code} {login_resp.text}")
+                return {}
+        except Exception as e:
+            print(f"⚠️ Login error: {e}")
+            return {}
+
         for idx, image in enumerate(images):
             # Convert [H, W, C] float32 (0~1) → uint8 PIL
             img_array = (255.0 * image.cpu().numpy()).clip(0, 255).astype(np.uint8)
@@ -34,8 +56,8 @@ class HTTPUploadImage:
 
             try:
                 files = {'image': (filename, buf, 'image/png')}
-                resp = requests.post(
-                    "http://47.82.92.91:38080/api/v1/upload",
+                resp = session.post(
+                    f"{base_url}/api/v1/upload",
                     files=files,
                     timeout=10
                 )

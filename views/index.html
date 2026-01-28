@@ -294,6 +294,8 @@
             font-size: 24px;
             z-index: 1001;
             transition: background 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         }
 
         .lightbox-nav:hover {
@@ -473,7 +475,7 @@
     </div>
 
     <!-- Lightbox Modal -->
-    <div id="lightbox" class="lightbox">
+    <div id="lightbox" class="lightbox" tabindex="-1">
         <span class="lightbox-close">&times;</span>
         <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image">‹</button>
         <button class="lightbox-nav lightbox-next" type="button" aria-label="Next image">›</button>
@@ -526,6 +528,7 @@
                     // Show the lightbox
                     lightbox.classList.add('active');
                     document.body.style.overflow = 'hidden'; // Prevent scrolling
+                    lightbox.focus();
                 });
             });
 
@@ -554,7 +557,7 @@
             });
 
             // Close lightbox when pressing Escape key
-            document.addEventListener('keydown', function(e) {
+            function handleLightboxKeydown(e) {
                 if (!lightbox.classList.contains('active')) {
                     return;
                 }
@@ -566,7 +569,10 @@
                 } else if (e.key === 'ArrowRight') {
                     showImageAt(currentIndex + 1);
                 }
-            });
+            }
+
+            document.addEventListener('keydown', handleLightboxKeydown);
+            lightbox.addEventListener('keydown', handleLightboxKeydown);
 
             function setSelectMode(enabled) {
                 getCards().forEach(card => {

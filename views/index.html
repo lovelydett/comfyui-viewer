@@ -350,6 +350,35 @@
             border-radius: 20px;
             max-width: 80%;
             word-break: break-all;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .lightbox-caption-text {
+            flex: 1;
+            text-align: center;
+        }
+
+        .lightbox-caption-delete {
+            background: rgba(232, 72, 85, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease, transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .lightbox-caption-delete:hover {
+            background: rgba(232, 72, 85, 1);
+            transform: scale(1.1);
         }
 
         @keyframes fadeIn {
@@ -388,7 +417,14 @@
             .lightbox-caption {
                 font-size: 14px;
                 bottom: 15px;
-                padding: 8px 15px;
+                padding: 8px 12px;
+                gap: 8px;
+            }
+
+            .lightbox-caption-delete {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
             }
 
             .lightbox-nav {
@@ -494,7 +530,10 @@
         <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image">‹</button>
         <button class="lightbox-nav lightbox-next" type="button" aria-label="Next image">›</button>
         <img class="lightbox-content" id="lightbox-img" src="" alt="">
-        <div class="lightbox-caption" id="lightbox-caption"></div>
+        <div class="lightbox-caption" id="lightbox-caption">
+            <span class="lightbox-caption-text"></span>
+            <button class="lightbox-caption-delete" type="button" aria-label="Delete image" title="Delete image">🗑️</button>
+        </div>
     </div>
 
     <script>
@@ -502,6 +541,8 @@
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
             const lightboxCaption = document.getElementById('lightbox-caption');
+            const lightboxCaptionText = document.querySelector('.lightbox-caption-text');
+            const lightboxCaptionDelete = document.querySelector('.lightbox-caption-delete');
             const closeBtn = document.querySelector('.lightbox-close');
             const prevBtn = document.querySelector('.lightbox-prev');
             const nextBtn = document.querySelector('.lightbox-next');
@@ -528,7 +569,13 @@
                 currentIndex = (index + images.length) % images.length;
                 const img = images[currentIndex];
                 lightboxImg.src = img.src;
-                lightboxCaption.textContent = img.alt;
+                lightboxCaptionText.textContent = img.alt;
+                
+                // Store the current filename for deletion
+                const card = img.closest('.image-card');
+                if (card) {
+                    lightboxImg.dataset.filename = card.dataset.filename;
+                }
             }
 
             refreshImages();
@@ -667,6 +714,44 @@
                         removeCardsByFilename(result.deleted);
                     }
                     setSelectMode(false);
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            // Lightbox delete button handler
+            lightboxCaptionDelete?.addEventListener('click', async function() {
+                const filename = lightboxImg.dataset.filename;
+                if (!filename) {
+                    return;
+                }
+                
+                if (!confirm(`Delete ${filename}? This cannot be undone.`)) {
+                    return;
+                }
+                
+                try {
+                    await deleteSingleImage(filename);
+                    
+                    // Remove the card from the grid
+                    const card = document.querySelector(`.image-card[data-filename="${filename}"]`);
+                    if (card) {
+                        card.remove();
+                    }
+                    
+                    // Refresh images and update lightbox
+                    refreshImages();
+                    
+                    if (images.length === 0) {
+                        // No more images, close lightbox
+                        lightbox.classList.remove('active');
+                        document.body.style.overflow = '';
+                    } else {
+                        // Show next image, or previous if at the end
+                        showImageAt(currentIndex);
+                    }
+                    
+                    updateSelectionCount();
                 } catch (err) {
                     alert(err.message);
                 }
